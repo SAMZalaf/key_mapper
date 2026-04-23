@@ -317,6 +317,38 @@ class DraggableButton(tk.Frame):
         if self.bind_key and self.app:
             self.app.key_bindings[self.bind_key.lower()] = self
     
+    def trigger_action(self):
+        """تفعيل إجراء الزر عند ضغط المفتاح المرتبط"""
+        # تأثير الضغط
+        self.is_pressed = True
+        self.press_count += 1
+        self.update_press_count_display()
+        self.apply_press_effect()
+        
+        # تسجيل الحدث
+        if self.app and self.app.input_monitor:
+            self.app.input_monitor.events_log.append({
+                'type': 'button_trigger',
+                'button_id': self.key_config.get('id'),
+                'button_label': self.label_text,
+                'bind_key': self.bind_key,
+                'timestamp': datetime.now().strftime("%H:%M:%S.%f")[:-3],
+                'triggered_by': 'keyboard'
+            })
+        
+        # تفعيل الإجراء فوراً
+        if self.app:
+            self.app.trigger_button_action(self.key_config, is_press=True)
+            # رفع المفتاح بعد وقت قصير
+            self.after(100, self.release_after_trigger)
+    
+    def release_after_trigger(self):
+        """إعادة الزر لحالته الأصلية بعد التفعيل"""
+        self.is_pressed = False
+        self.release_effect()
+        if self.app:
+            self.app.trigger_button_action(self.key_config, is_press=False)
+    
     def on_left_click(self, event):
         """عند النقر الأيسر - تفعيل فوري مع تتبع"""
         self.is_pressed = True
@@ -767,9 +799,12 @@ class KeyboardMapperProV3:
         self.root.geometry("1400x800")
         self.root.configure(bg='#1a1a1a')
         
+        # إعداد الشفافية
+        self.root.attributes('-alpha', 0.95)  # شفافية 95%
+        
         # متغيرات التطبيق
         self.buttons = []
-        self.key_bindings = {}
+        self.key_bindings = {}  # ربط المفاتيح بالأزرار
         self.clipboard_data = None
         self.edit_mode = True
         self.settings = {
@@ -792,6 +827,11 @@ class KeyboardMapperProV3:
         
         # بدء المراقبة
         self.input_monitor.start()
+        
+        # ربط لوحة المفاتيح بالنافذة
+        self.root.bind('<Key>', self.on_key_event)
+        self.root.bind('<KeyPress>', self.on_key_press_event)
+        self.root.bind('<KeyRelease>', self.on_key_release_event)
         
         # تحديث دوري للإحصائيات
         self.update_stats_periodically()
@@ -946,6 +986,9 @@ class KeyboardMapperProV3:
         
         if event.get('type') == 'key_press':
             event_str += f" - {event.get('key', '')}"
+            # التحقق من تفعيل الأزرار المرتبطة بالمفتاح
+            key_name = event.get('key', '').lower()
+            self.check_and_trigger_buttons(key_name)
         elif event.get('type') == 'mouse_click':
             event_str += f" - {event.get('button', '')} ({event.get('action', '')})"
         elif event.get('type') == 'mouse_move':
@@ -959,6 +1002,48 @@ class KeyboardMapperProV3:
         lines = self.events_text.get('1.0', tk.END).split('\n')
         if len(lines) > 100:
             self.events_text.delete('1.0', '2.0')
+    
+    def check_and_trigger_buttons(self, key_name):
+        """التحقق من الأزرار المرتبطة بالمفتاح وتفعيلها"""
+        # تنظيف اسم المفتاح
+        key_name = key_name.strip().lower()
+        
+        for btn_config in self.buttons:
+            bind_key = btn_config.get('bind', '').strip().lower()
+            
+            # التحقق من التطابق المباشر أو ضمن تركيبة مفاتيح
+            if bind_key:
+                # تطابق مباشر
+                if bind_key == key_name:
+                    self.trigger_button_by_config(btn_config)
+                # تطابق ضمن تركيبة (مثل ctrl+w)
+                elif '+' in bind_key:
+                    parts = bind_key.split('+')
+                    if key_name in parts or key_name.endswith(parts[-1]):
+                        self.trigger_button_by_config(btn_config)
+    
+    def trigger_button_by_config(self, btn_config):
+        """تفعيل زر بناءً على التكوين"""
+        # العثور على زر DraggableButton المطابق
+        for widget in self.content_frame.winfo_children():
+            if isinstance(widget, DraggableButton) and widget.config_data.get('id') == btn_config.get('id'):
+                widget.trigger_action()
+                break
+    
+    def on_key_event(self, event):
+        """معالجة أحداث المفاتيح العامة"""
+        key_char = event.char if event.char else event.keysym
+        if key_char:
+            self.check_and_trigger_buttons(key_char.lower())
+    
+    def on_key_press_event(self, event):
+        """عند ضغط مفتاح"""
+        key_name = event.keysym.lower()
+        self.check_and_trigger_buttons(key_name)
+    
+    def on_key_release_event(self, event):
+        """عند رفع مفتاح"""
+        pass  # يمكن إضافة منطق إضافي هنا
     
     def update_stats_periodically(self):
         """تحديث الإحصائيات بشكل دوري"""
