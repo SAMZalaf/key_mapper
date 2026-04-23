@@ -1,7 +1,3 @@
---- README_PRO_AR.md (原始)
-
-
-+++ README_PRO_AR.md (修改后)
 # 🎹 KeyboardMapper Pro - دليل التوثيق الشامل
 
 ## 📋 نظرة عامة

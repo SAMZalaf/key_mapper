@@ -1,4 +1,4 @@
-mport tkinter as tk
+import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, colorchooser
 import json
 import os
@@ -159,20 +159,120 @@ class KeyboardMapperApp:
         self.scale_trans.set(100)
         self.scale_trans.pack(fill=tk.X, pady=5)
         
-        btn_lock_mouse = tk.Button(tab_control, text="قفل الماوس (F2)", command=self.toggle_mouse_lock, bg="#444", fg="white")
-        btn_lock_mouse.pack(fill=tk.X, pady=5)
+        # تاب التسجيل
+        tab_recording = tk.Frame(self.notebook, bg="#2d2d2d")
+        self.notebook.add(tab_recording, text="تسجيل")
         
-        btn_toggle_layout = tk.Button(tab_control, text="تشغيل/إيقاف التخطيط (F1)", command=self.toggle_layout, bg="#444", fg="white")
-        btn_toggle_layout.pack(fill=tk.X, pady=5)
+        btn_start_record = tk.Button(tab_recording, text="بدء التسجيل", command=self.start_recording, 
+                                      bg="#444", fg="#00ff00", font=("Arial", 10, "bold"))
+        btn_start_record.pack(fill=tk.X, pady=5)
+        
+        btn_stop_record = tk.Button(tab_recording, text="إيقاف التسجيل", command=self.stop_recording,
+                                     bg="#444", fg="#ff0000", font=("Arial", 10, "bold"))
+        btn_stop_record.pack(fill=tk.X, pady=5)
+        
+        btn_save_record = tk.Button(tab_recording, text="حفظ التسجيل", command=self.save_recording, bg="#444", fg="white")
+        btn_save_record.pack(fill=tk.X, pady=5)
+        
+        btn_play_record = tk.Button(tab_recording, text="تشغيل التسجيل", command=self.play_recording, bg="#444", fg="white")
+        btn_play_record.pack(fill=tk.X, pady=5)
+        
+        self.lbl_record_status = tk.Label(tab_recording, text="الحالة: متوقف", bg="#2d2d2d", fg="white")
+        self.lbl_record_status.pack(pady=10)
+        
+        # تاب الأداء
+        tab_performance = tk.Frame(self.notebook, bg="#2d2d2d")
+        self.notebook.add(tab_performance, text="أداء")
+        
+        lbl_fps = tk.Label(tab_performance, text="معدل الإطارات (FPS):", bg="#2d2d2d", fg="white")
+        lbl_fps.pack(pady=(10,5))
+        self.scale_fps = tk.Scale(tab_performance, from_=15, to=144, orient=tk.HORIZONTAL,
+                                   bg="#2d2d2d", fg="white")
+        self.scale_fps.set(60)
+        self.scale_fps.pack(fill=tk.X, pady=5)
+        
+        self.chk_vsync = tk.BooleanVar(value=False)
+        chk_vsync = tk.Checkbutton(tab_performance, text="V-Sync", variable=self.chk_vsync,
+                                    bg="#2d2d2d", fg="white", selectcolor="#2d2d2d")
+        chk_vsync.pack(pady=5)
+        
+        self.chk_hw_accel = tk.BooleanVar(value=True)
+        chk_hw_accel = tk.Checkbutton(tab_performance, text="التسريع العتادي", variable=self.chk_hw_accel,
+                                       bg="#2d2d2d", fg="white", selectcolor="#2d2d2d")
+        chk_hw_accel.pack(pady=5)
+        
+        lbl_quality = tk.Label(tab_performance, text="جودة الرسم:", bg="#2d2d2d", fg="white")
+        lbl_quality.pack(pady=(10,5))
+        quality_frame = tk.Frame(tab_performance, bg="#2d2d2d")
+        quality_frame.pack(fill=tk.X, pady=5)
+        
+        for i, q in enumerate(["منخفضة", "متوسطة", "عالية"]):
+            rb = tk.Radiobutton(quality_frame, text=q, value=i, bg="#2d2d2d", fg="white",
+                               selectcolor="#2d2d2d", activebackground="#2d2d2d")
+            rb.grid(row=0, column=i, padx=10)
 
-        # تاب المظهر
+    def start_recording(self):
+        """بدء تسجيل الإجراءات"""
+        self.recording = True
+        self.recorded_actions = []
+        self.lbl_record_status.config(text="الحالة: جاري التسجيل...", fg="#00ff00")
+        print("بدأ التسجيل")
+    
+    def stop_recording(self):
+        """إيقاف تسجيل الإجراءات"""
+        self.recording = False
+        count = len(self.recorded_actions)
+        self.lbl_record_status.config(text=f"الحالة: متوقف ({count} حدث)", fg="#ff0000")
+        print(f"تم إيقاف التسجيل. عدد الأحداث: {count}")
+    
+    def save_recording(self):
+        """حفظ التسجيل في ملف JSON"""
+        if not self.recorded_actions:
+            messagebox.showwarning("تحذير", "لا يوجد تسجيل لحفظه!")
+            return
+        
+        filename = filedialog.asksaveasfilename(defaultextension=".json", 
+                                                 filetypes=[("JSON Files", "*.json")])
+        if filename:
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(self.recorded_actions, f, indent=2, ensure_ascii=False)
+            messagebox.showinfo("نجاح", f"تم حفظ التسجيل في:\n{filename}")
+    
+    def play_recording(self):
+        """تشغيل تسجيل محفوظ"""
+        filename = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")])
+        if filename:
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    actions = json.load(f)
+                print(f"جاري تشغيل {len(actions)} حدث من {filename}")
+                messagebox.showinfo("تشغيل", f"سيتم تشغيل {len(actions)} حدث")
+                # هنا يمكن إضافة منطق التشغيل الفعلي
+            except Exception as e:
+                messagebox.showerror("خطأ", str(e))
         tab_appearance = tk.Frame(self.notebook, bg="#2d2d2d")
         self.notebook.add(tab_appearance, text="مظهر")
         
-        themes = ["داكن", "فاتح", "أزرق", "أخضر", "برمجي"]
+        themes = ["داكن", "فاتح", "أزرق", "أخضر", "برتقالي"]
         for t in themes:
             btn = tk.Button(tab_appearance, text=t, command=lambda x=t: self.change_theme(x))
             btn.pack(fill=tk.X, pady=2)
+        
+        # حجم المفاتيح
+        lbl_size = tk.Label(tab_appearance, text="حجم المفاتيح:", bg="#2d2d2d", fg="white")
+        lbl_size.pack(pady=(10,5))
+        self.scale_key_size = tk.Scale(tab_appearance, from_=30, to=200, orient=tk.HORIZONTAL, 
+                                        bg="#2d2d2d", fg="white", command=self.update_key_size)
+        self.scale_key_size.set(50)
+        self.scale_key_size.pack(fill=tk.X, pady=5)
+        
+        # الشبكة
+        lbl_grid = tk.Label(tab_appearance, text="حجم الشبكة:", bg="#2d2d2d", fg="white")
+        lbl_grid.pack(pady=(10,5))
+        self.scale_grid = tk.Scale(tab_appearance, from_=5, to=50, orient=tk.HORIZONTAL,
+                                    bg="#2d2d2d", fg="white", command=self.update_grid)
+        self.scale_grid.set(10)
+        self.scale_grid.pack(fill=tk.X, pady=5)
 
     def load_default_layout(self):
         # إنشاء مفاتيح افتراضية
@@ -275,7 +375,7 @@ class KeyboardMapperApp:
             "فاتح": ("#f0f0f0", "#ffffff", "#000000"),
             "أزرق": ("#001f3f", "#003366", "#ffffff"),
             "أخضر": ("#001100", "#003300", "#00ff00"),
-            "برمجي": ("#282c34", "#21252b", "#abb2bf")
+            "برتقالي": ("#331100", "#552200", "#ffaa00")
         }
         if theme_name in colors:
             bg, side, txt = colors[theme_name]
@@ -284,6 +384,18 @@ class KeyboardMapperApp:
             self.keyboard_canvas.config(bg=bg)
             self.sidebar.config(bg=side)
             # تحديث الألوان داخل التبويبات يتطلب تكرار الحلقات، تم تبسيطه هنا
+    
+    def update_key_size(self, val):
+        """تحديث حجم المفاتيح"""
+        size = int(val)
+        self.settings["key_size"] = size
+        print(f"تم تغيير حجم المفاتيح إلى: {size}")
+    
+    def update_grid(self, val):
+        """تحديث حجم الشبكة"""
+        grid_size = int(val)
+        self.settings["grid_snap"] = grid_size
+        print(f"تم تغيير حجم الشبكة إلى: {grid_size}")
 
     def bind_hotkeys(self):
         self.root.bind("<F1>", lambda e: self.toggle_layout())
@@ -292,6 +404,31 @@ class KeyboardMapperApp:
         self.root.bind("<Control-e>", lambda e: self.toggle_edit_mode())
         self.root.bind("<Control-s>", lambda e: self.save_layout())
         self.root.bind("<Control-o>", lambda e: self.load_layout())
+        self.root.bind("<Control-n>", lambda e: self.new_layout())
+        # دعم Ctrl+Scroll لتغيير الحجم
+        self.root.bind("<Control-MouseWheel>", self.on_ctrl_scroll)
+    
+    def new_layout(self):
+        """إنشاء تخطيط جديد"""
+        if messagebox.askyesno("تأكيد", "هل أنت متأكد من إنشاء تخطيط جديد؟ سيتم فقدان التخطيط الحالي."):
+            for widget in self.keyboard_canvas.winfo_children():
+                widget.destroy()
+            self.keys = []
+            self.load_default_layout()
+            print("تم إنشاء تخطيط جديد")
+    
+    def on_ctrl_scroll(self, event):
+        """تغيير حجم المفتاح المحدد عند الضغط على Ctrl+Scroll"""
+        if not self.edit_mode or len(self.keys) == 0:
+            return
+        
+        # الحصول على آخر مفتاح تم النقر عليه (يمكن تحسينه)
+        delta = 1 if event.delta > 0 else -1
+        current_size = self.settings.get("key_size", 50)
+        new_size = max(30, min(200, current_size + delta * 5))
+        self.settings["key_size"] = new_size
+        self.scale_key_size.set(new_size)
+        print(f"حجم المفاتيح: {new_size}")
 
     def save_layout(self):
         filename = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON Files", "*.json")])
@@ -313,7 +450,7 @@ class KeyboardMapperApp:
                 for widget in self.keyboard_canvas.winfo_children():
                     widget.destroy()
                 self.keys = []
-                for config in 
+                for config in data:
                     self.create_key_widget(config)
                 messagebox.showinfo("نجاح", "تم تحميل التخطيط!")
             except Exception as e:
