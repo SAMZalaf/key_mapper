@@ -1,1 +1,26 @@
-Nothing needs to be added to .gitignore based on the provided file changes. The changes consist only of Python source files (.py), a markdown file (.md), and no build artifacts, dependencies, or temporary files that would require ignoring.
+```
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Dependencies
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+```
