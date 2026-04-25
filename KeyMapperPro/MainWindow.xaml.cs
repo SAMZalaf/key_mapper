@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,6 +11,7 @@ using System.Windows.Shapes;
 using KeyMapperPro.Models;
 using KeyMapperPro.Native;
 using KeyMapperPro.Services;
+using KeyMapperPro.Views;
 
 namespace KeyMapperPro
 {
@@ -23,6 +25,7 @@ namespace KeyMapperPro
         private InputHookService _hookService;
         private InputSimulatorService _simulatorService;
         private MappingEngine _mappingEngine;
+        private SettingsWindow _settingsWindow;
 
         public MainWindow()
         {
@@ -35,6 +38,10 @@ namespace KeyMapperPro
             double height = SystemParameters.PrimaryScreenHeight;
             _mappingEngine = new MappingEngine(_simulatorService, _elements, width, height);
 
+            _settingsWindow = new SettingsWindow();
+            _settingsWindow.OnAddElement += SettingsWindow_OnAddElement;
+            _settingsWindow.OnUpdateElement += SettingsWindow_OnUpdateElement;
+
             _hookService.KeyChanged += _hookService_KeyChanged;
             _hookService.MouseMoved += _hookService_MouseMoved;
 
@@ -42,8 +49,61 @@ namespace KeyMapperPro
             this.Closing += MainWindow_Closing;
         }
 
+        private void SettingsWindow_OnAddElement(ControlType type)
+        {
+            var element = new MappingElement { Type = type, X = 50, Y = 50, BoundKey = "None" };
+            AddMappingElement(element);
+        }
+
+        private void SettingsWindow_OnUpdateElement(MappingElement element)
+        {
+            foreach (FrameworkElement child in MappingCanvas.Children)
+            {
+                if (child.Tag == element)
+                {
+                    UpdateUIFromModel(child, element);
+                    break;
+                }
+            }
+        }
+
+        private void UpdateUIFromModel(FrameworkElement uiElement, MappingElement element)
+        {
+            if (uiElement is Border border)
+            {
+                border.Opacity = element.Opacity;
+                try {
+                    border.Background = (SolidColorBrush)new BrushConverter().ConvertFrom(element.ColorHex)!;
+                } catch {
+                    border.Background = System.Windows.Media.Brushes.Red;
+                }
+
+                if (border.Child is TextBlock textBlock)
+                {
+                    textBlock.Text = element.BoundKey;
+                }
+
+                border.Width = element.Width;
+                border.Height = element.Height;
+                border.CornerRadius = new CornerRadius(element.Width / 2);
+
+                Canvas.SetLeft(border, (element.X / 100) * MappingCanvas.ActualWidth - (element.Width / 2));
+                Canvas.SetTop(border, (element.Y / 100) * MappingCanvas.ActualHeight - (element.Height / 2));
+            }
+        }
+
         private bool _hookService_KeyChanged(int vkCode, bool isDown)
         {
+            var key = KeyInterop.KeyFromVirtualKey(vkCode);
+            if (key == Key.F9 && isDown)
+            {
+                this.Dispatcher.Invoke(() => {
+                    if (_settingsWindow.IsVisible) _settingsWindow.Hide();
+                    else _settingsWindow.Show();
+                });
+                return true;
+            }
+
             if (!_isMappingMode)
             {
                 return _mappingEngine.HandleKeyPress(vkCode, isDown);
@@ -69,6 +129,7 @@ namespace KeyMapperPro
         {
             _hookService.Stop();
             _hookService.Dispose();
+            _settingsWindow.Close();
         }
 
         private void SetClickThrough(bool clickThrough)
@@ -117,11 +178,11 @@ namespace KeyMapperPro
 
             Border border = new Border
             {
-                Width = 50,
-                Height = 50,
+                Width = element.Width,
+                Height = element.Height,
                 Background = System.Windows.Media.Brushes.Red,
-                CornerRadius = new CornerRadius(25),
-                Opacity = 0.7,
+                CornerRadius = new CornerRadius(element.Width / 2),
+                Opacity = element.Opacity,
                 Child = new TextBlock
                 {
                     Text = element.BoundKey,
@@ -135,11 +196,58 @@ namespace KeyMapperPro
             border.MouseLeftButtonDown += Element_MouseLeftButtonDown;
             border.MouseMove += Element_MouseMove;
             border.MouseLeftButtonUp += Element_MouseLeftButtonUp;
+            border.MouseRightButtonDown += Element_MouseRightButtonDown;
 
-            Canvas.SetLeft(border, (element.X / 100) * MappingCanvas.ActualWidth - 25);
-            Canvas.SetTop(border, (element.Y / 100) * MappingCanvas.ActualHeight - 25);
+            UpdateUIFromModel(border, element);
 
             MappingCanvas.Children.Add(border);
+        }
+
+        private void Element_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isMappingMode) return;
+            var uiElement = sender as FrameworkElement;
+            if (uiElement == null) return;
+
+            var element = (MappingElement)uiElement.Tag;
+
+            System.Windows.Controls.ContextMenu menu = new System.Windows.Controls.ContextMenu();
+
+            System.Windows.Controls.MenuItem copyItem = new System.Windows.Controls.MenuItem { Header = "Copy" };
+            copyItem.Click += (s, ev) => {
+                var clone = new MappingElement {
+                    Type = element.Type,
+                    X = element.X + 2,
+                    Y = element.Y + 2,
+                    BoundKey = element.BoundKey,
+                    ColorHex = element.ColorHex,
+                    Opacity = element.Opacity,
+                    Width = element.Width,
+                    Height = element.Height
+                };
+                AddMappingElement(clone);
+            };
+
+            System.Windows.Controls.MenuItem deleteItem = new System.Windows.Controls.MenuItem { Header = "Delete" };
+            deleteItem.Click += (s, ev) => {
+                _elements.Remove(element);
+                MappingCanvas.Children.Remove(uiElement);
+            };
+
+            System.Windows.Controls.MenuItem propertiesItem = new System.Windows.Controls.MenuItem { Header = "Properties" };
+            propertiesItem.Click += (s, ev) => {
+                _settingsWindow.Show();
+                _settingsWindow.EditElement(element);
+            };
+
+            menu.Items.Add(copyItem);
+            menu.Items.Add(deleteItem);
+            menu.Items.Add(new System.Windows.Controls.Separator());
+            menu.Items.Add(propertiesItem);
+
+            uiElement.ContextMenu = menu;
+            menu.IsOpen = true;
+            e.Handled = true;
         }
 
         private void Element_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -166,8 +274,8 @@ namespace KeyMapperPro
             Canvas.SetTop(_draggedElement, top);
 
             var element = (MappingElement)((FrameworkElement)_draggedElement).Tag;
-            element.X = ((left + 25) / MappingCanvas.ActualWidth) * 100;
-            element.Y = ((top + 25) / MappingCanvas.ActualHeight) * 100;
+            element.X = ((left + (element.Width / 2)) / MappingCanvas.ActualWidth) * 100;
+            element.Y = ((top + (element.Height / 2)) / MappingCanvas.ActualHeight) * 100;
         }
 
         private void Element_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
