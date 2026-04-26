@@ -51,7 +51,13 @@ namespace KeyMapperPro
 
         private void SettingsWindow_OnAddElement(ControlType type)
         {
-            var element = new MappingElement { Type = type, X = 50, Y = 50, BoundKey = "None" };
+            var element = new MappingElement {
+                Name = $"New {type}",
+                Type = type,
+                X = 50,
+                Y = 50,
+                BoundKey = "None"
+            };
             AddMappingElement(element);
         }
 
@@ -87,8 +93,11 @@ namespace KeyMapperPro
                 border.Height = element.Height;
                 border.CornerRadius = new CornerRadius(element.Width / 2);
 
-                Canvas.SetLeft(border, (element.X / 100) * MappingCanvas.ActualWidth - (element.Width / 2));
-                Canvas.SetTop(border, (element.Y / 100) * MappingCanvas.ActualHeight - (element.Height / 2));
+                double canvasWidth = MappingCanvas.ActualWidth > 0 ? MappingCanvas.ActualWidth : SystemParameters.PrimaryScreenWidth;
+                double canvasHeight = MappingCanvas.ActualHeight > 0 ? MappingCanvas.ActualHeight : SystemParameters.PrimaryScreenHeight;
+
+                Canvas.SetLeft(border, (element.X / 100) * canvasWidth - (element.Width / 2));
+                Canvas.SetTop(border, (element.Y / 100) * canvasHeight - (element.Height / 2));
             }
         }
 
@@ -98,8 +107,16 @@ namespace KeyMapperPro
             if (key == Key.F9 && isDown)
             {
                 this.Dispatcher.Invoke(() => {
-                    if (_settingsWindow.IsVisible) _settingsWindow.Hide();
-                    else _settingsWindow.Show();
+                    if (_settingsWindow.IsVisible)
+                    {
+                        _settingsWindow.Hide();
+                        SetMappingMode(false);
+                    }
+                    else
+                    {
+                        _settingsWindow.Show();
+                        SetMappingMode(true);
+                    }
                 });
                 return true;
             }
@@ -109,6 +126,27 @@ namespace KeyMapperPro
                 return _mappingEngine.HandleKeyPress(vkCode, isDown);
             }
             return false;
+        }
+
+        private void SetMappingMode(bool enabled)
+        {
+            _isMappingMode = enabled;
+            if (_isMappingMode)
+            {
+                ToggleMappingBtn.Content = "Disable Mapping Mode";
+                MappingCanvas.Visibility = Visibility.Visible;
+                SaveBtn.Visibility = Visibility.Visible;
+                this.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 0, 0, 0));
+                SetClickThrough(false);
+            }
+            else
+            {
+                ToggleMappingBtn.Content = "Enable Mapping Mode";
+                MappingCanvas.Visibility = Visibility.Collapsed;
+                SaveBtn.Visibility = Visibility.Collapsed;
+                this.Background = System.Windows.Media.Brushes.Transparent;
+                SetClickThrough(true);
+            }
         }
 
         private void _hookService_MouseMoved(int x, int y)
@@ -148,28 +186,7 @@ namespace KeyMapperPro
 
         private void ToggleMappingBtn_Click(object sender, RoutedEventArgs e)
         {
-            _isMappingMode = !_isMappingMode;
-            if (_isMappingMode)
-            {
-                ToggleMappingBtn.Content = "Disable Mapping Mode";
-                MappingCanvas.Visibility = Visibility.Visible;
-                SaveBtn.Visibility = Visibility.Visible;
-                this.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 0, 0, 0));
-                SetClickThrough(false);
-
-                if (_elements.Count == 0)
-                {
-                    AddMappingElement(new MappingElement { Name = "Fire", Type = ControlType.TapSpot, X = 50, Y = 50, BoundKey = "F" });
-                }
-            }
-            else
-            {
-                ToggleMappingBtn.Content = "Enable Mapping Mode";
-                MappingCanvas.Visibility = Visibility.Collapsed;
-                SaveBtn.Visibility = Visibility.Collapsed;
-                this.Background = System.Windows.Media.Brushes.Transparent;
-                SetClickThrough(true);
-            }
+            SetMappingMode(!_isMappingMode);
         }
 
         private void AddMappingElement(MappingElement element)
