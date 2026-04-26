@@ -1,0 +1,60 @@
+<Window x:Class="KeyMapperPro.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="KeyMapperPro Settings" Height="500" Width="600"
+        WindowStyle="ToolWindow" Topmost="True" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <TabControl>
+            <TabItem Header="Layout and Controls">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Add New Control" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <Button x:Name="AddTapSpotBtn" Content="Add Tap Spot" Click="AddTapSpotBtn_Click" Margin="0,0,0,5" Padding="5"/>
+                        <Button x:Name="AddDPadBtn" Content="Add D-Pad" Click="AddDPadBtn_Click" Margin="0,0,0,5" Padding="5"/>
+                        <Button x:Name="AddAimModeBtn" Content="Add Aim Mode" Click="AddAimModeBtn_Click" Margin="0,0,0,5" Padding="5"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="1" BorderBrush="Gray" BorderThickness="1" Margin="10,0,0,0" Padding="10">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="PropertiesPanel" Visibility="Collapsed">
+                                <TextBlock Text="Control Properties" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="Name:"/>
+                                <TextBox x:Name="PropName" Margin="0,0,0,5"/>
+
+                                <TextBlock Text="Key:"/>
+                                <TextBox x:Name="PropKey" Margin="0,0,0,5"/>
+
+                                <TextBlock Text="Size (W x H):"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                    <TextBox x:Name="PropWidth" Width="50" Margin="0,0,5,0"/>
+                                    <TextBlock Text="x" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <TextBox x:Name="PropHeight" Width="50"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Opacity:"/>
+                                <Slider x:Name="PropOpacity" Minimum="0.1" Maximum="1" TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,0,0,5"/>
+
+                                <TextBlock Text="Color (Hex):"/>
+                                <TextBox x:Name="PropColor" Margin="0,0,0,10"/>
+
+                                <Button x:Name="ApplyBtn" Content="Apply Changes" Click="ApplyBtn_Click" Padding="5"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+            <TabItem Header="General Settings">
+                <StackPanel Margin="10">
+                    <CheckBox Content="Launch at Startup" Margin="0,0,0,5"/>
+                    <CheckBox Content="Show Key Hints" IsChecked="True" Margin="0,0,0,5"/>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
